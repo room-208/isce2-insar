@@ -1,7 +1,5 @@
 FROM isce/isce2:latest
 
-COPY requirements.txt .
-
 RUN apt update && \
     apt install -y git curl zip unzip nano
 
