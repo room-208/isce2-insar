@@ -7,3 +7,6 @@ RUN apt update && \
 
 RUN pip install --upgrade pip setuptools && \
     pip install -r requirements.txt
+
+ENV ISCE_HOME=/usr/lib/python3.8/dist-packages/isce/
+ENV PATH=$ISCE_HOME/applications:$PATH
