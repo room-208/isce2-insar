@@ -7,6 +7,8 @@ ROOT_DIR = Path(__file__).parents[2]
 DATA_DIR = ROOT_DIR / "data"
 DATA_ORBIT_DIR = DATA_DIR / "orbit"
 DATA_SAFE_DIR = DATA_DIR / "safe"
+DATA_SAFE_ZIP_DIR = DATA_SAFE_DIR / "zip"
+DATA_SAFE_UNZIP_DIR = DATA_SAFE_DIR / "unzip"
 DATA_STAC_DIR = DATA_DIR / "stac"
 
 
