@@ -1,55 +1,54 @@
 import asyncio
-from typing import Generator
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import List
 
 import pystac
 import pystac_client
 from download_utils import download_item, replace_href
-from settings import (
-    COLLECTION,
-    DATA_ORBIT_DIR,
-    END_DATE,
-    FORMAT,
-    STAC_API_URL,
-    START_DATE,
-)
+from settings import COLLECTION, DATA_ORBIT_DIR, DATA_STAC_DIR, STAC_API_URL
 
 
-def search_orbit_item() -> Generator[pystac.Item, None, None]:
-    start_date = START_DATE
+def get_stac_json_paths() -> List[Path]:
+    return list(DATA_STAC_DIR.glob("*.json"))
 
-    while True:
-        client = pystac_client.Client.open(STAC_API_URL)
-        searched_items = client.search(
-            collections=[COLLECTION],
-            datetime=f"{start_date.strftime(FORMAT)}/{END_DATE.strftime(FORMAT)}",
-        )  # 1度に検索可能な最大数は2000
 
-        found = 0
+def search_orbit_items(start_date: str, end_date: str) -> List[pystac.Item]:
+    client = pystac_client.Client.open(STAC_API_URL)
+    searched_items = client.search(
+        collections=[COLLECTION],
+        datetime=f"{start_date}/{end_date}",
+    )
 
-        for item in searched_items.items():
-            found += 1
+    orbit_items = set()
+    for item in searched_items.items():
+        if item.id.startswith("S1A_OPER_AUX_RESORB_OPOD") and item.id.endswith(".EOF"):
+            orbit_items.add(item)
 
-            if start_date < item.datetime.replace(tzinfo=None):
-                start_date = item.datetime.replace(tzinfo=None)
+    orbit_items = list(orbit_items)
+    orbit_items.sort(key=lambda item: item.datetime)
+    return orbit_items
 
-            if item.id.startswith("S1A_OPER_AUX_RESORB_OPOD") and item.id.endswith(
-                ".EOF"
-            ):
-                yield item
 
-        if found == 2000:
-            print("Found exactly 2000 items, continuing...")
-            continue
-        elif found < 2000:
-            print("Found fewer than 2000 items, stopping the search.")
-            break
-        else:
-            raise RuntimeError("Unexpected number of items found, more than 2000.")
+def shift_hours_in_date(date: str, hours: int) -> str:
+    date: datetime = datetime.fromisoformat(date.replace("Z", "+00:00"))
+    new_date = date + timedelta(hours=hours)
+    return new_date.isoformat()
+
+
+def main() -> None:
+    for stac_json_path in get_stac_json_paths():
+        item = pystac.read_file(stac_json_path)
+        assert isinstance(item, pystac.Item)
+
+        date = item.properties["datetime"]
+        start_date = shift_hours_in_date(date, -1)
+        end_date = shift_hours_in_date(date, 1)
+
+        for item in search_orbit_items(start_date, end_date):
+            item = replace_href(item)
+            asyncio.run(download_item(item, DATA_ORBIT_DIR))
 
 
 if __name__ == "__main__":
-    for item in search_orbit_item():
-        item = replace_href(item)
-        output_dir = DATA_ORBIT_DIR / item.datetime.strftime("%Y-%m-%d")
-        output_dir.mkdir(exist_ok=True)
-        asyncio.run(download_item(item, output_dir))
+    main()
