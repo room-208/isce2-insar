@@ -8,6 +8,6 @@
     <component name="secondary">
         <catalog>/workspace/input-files/secondary.xml</catalog>
     </component>
-    <property name="swaths">[3]</property>
+    <property name="swaths">[1,2,3]</property>
   </component>
 </topsApp>
