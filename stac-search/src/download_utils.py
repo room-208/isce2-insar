@@ -33,3 +33,4 @@ async def download_item(item: pystac.Item, output_dir: Path) -> None:
             item.to_dict()["assets"]["PRODUCT"]["alternate"]["s3"]["href"]
         ),
     )
+    await client.close()
